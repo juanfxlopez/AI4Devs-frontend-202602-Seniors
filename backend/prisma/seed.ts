@@ -3,6 +3,21 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function main() {
+  await prisma.$transaction([
+    prisma.interview.deleteMany(),
+    prisma.application.deleteMany(),
+    prisma.interviewStep.deleteMany(),
+    prisma.position.deleteMany(),
+    prisma.employee.deleteMany(),
+    prisma.interviewFlow.deleteMany(),
+    prisma.interviewType.deleteMany(),
+    prisma.education.deleteMany(),
+    prisma.workExperience.deleteMany(),
+    prisma.resume.deleteMany(),
+    prisma.candidate.deleteMany(),
+    prisma.company.deleteMany(),
+  ]);
+
   // Create Companies
   const company1 = await prisma.company.create({
     data: {
