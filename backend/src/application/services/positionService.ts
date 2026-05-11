@@ -9,6 +9,20 @@ const calculateAverageScore = (interviews: any[]) => {
     return totalScore / interviews.length;
 };
 
+export const getPositionsListService = async () => {
+  const rows = await prisma.position.findMany({
+    orderBy: { id: 'asc' },
+    include: { company: { select: { name: true } } },
+  });
+  return rows.map((p) => ({
+    id: p.id,
+    title: p.title,
+    status: p.status,
+    deadline: p.applicationDeadline ? p.applicationDeadline.toISOString().slice(0, 10) : null,
+    companyName: p.company.name,
+  }));
+};
+
 export const getCandidatesByPositionService = async (positionId: number) => {
     try {
         const applications = await prisma.application.findMany({

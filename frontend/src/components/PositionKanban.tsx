@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Card, Container, Spinner } from 'react-bootstrap';
+import { Alert, Card, Col, Container, Row, Spinner } from 'react-bootstrap';
+import { ArrowLeft } from 'react-bootstrap-icons';
 import { Link, useParams } from 'react-router-dom';
 import { API_BASE_URL } from '../config/api';
 
@@ -59,6 +60,27 @@ async function readErrorMessage(res: Response): Promise<string> {
   return res.statusText || `Error ${res.status}`;
 }
 
+/** Map average score (typically 1–5 from interviews) to filled dots like Figma Make. */
+function scoreToFilledDots(average: number): number {
+  if (!Number.isFinite(average)) return 0;
+  return Math.max(0, Math.min(5, Math.round(average)));
+}
+
+function ScoreDots({ average }: { average: number }) {
+  const filled = scoreToFilledDots(average);
+  return (
+    <div className="d-flex gap-1 align-items-center">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <div
+          key={i}
+          className={`rounded-circle ${i < filled ? 'bg-success' : 'bg-secondary bg-opacity-25'}`}
+          style={{ width: 12, height: 12 }}
+        />
+      ))}
+    </div>
+  );
+}
+
 const PositionKanban: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const positionId = id ? parseInt(id, 10) : NaN;
@@ -70,6 +92,7 @@ const PositionKanban: React.FC = () => {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [updating, setUpdating] = useState(false);
+  const [dragOverStepId, setDragOverStepId] = useState<number | null>(null);
 
   const stepNames = useMemo(() => new Set(steps.map((s) => s.name)), [steps]);
 
@@ -151,6 +174,7 @@ const PositionKanban: React.FC = () => {
 
   const handleDropOnColumn = (targetStepId: number) => async (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
+    setDragOverStepId(null);
     const raw = e.dataTransfer.getData('application/json');
     let payload: DragPayload;
     try {
@@ -183,79 +207,99 @@ const PositionKanban: React.FC = () => {
       e.dataTransfer.effectAllowed = 'move';
     };
 
+  const handleDragEnd = () => {
+    setDragOverStepId(null);
+  };
+
   if (loading) {
     return (
-      <Container className="mt-5 text-center py-5">
-        <Spinner animation="border" role="status" />
-        <p className="mt-3 text-muted">Cargando proceso…</p>
-      </Container>
+      <div className="bg-light min-vh-100">
+        <Container className="text-center py-5" style={{ maxWidth: 1600 }}>
+          <Spinner animation="border" role="status" />
+          <p className="mt-3 text-muted">Cargando proceso…</p>
+        </Container>
+      </div>
     );
   }
 
   if (loadError || Number.isNaN(positionId)) {
     return (
-      <Container className="mt-5">
-        <Alert variant="danger">{loadError || 'ID de posición no válido'}</Alert>
-        <Link to="/positions" className="btn btn-outline-primary">
-          Volver a posiciones
-        </Link>
-      </Container>
+      <div className="bg-light min-vh-100">
+        <Container className="py-5" style={{ maxWidth: 1600 }}>
+          <Alert variant="danger">{loadError || 'ID de posición no válido'}</Alert>
+          <Link to="/positions" className="btn btn-outline-primary">
+            Volver a posiciones
+          </Link>
+        </Container>
+      </div>
     );
   }
 
   return (
-    <Container className="mt-4 mb-5">
-      <div className="d-flex flex-wrap align-items-center gap-2 mb-3">
-        <Link to="/positions" className="btn btn-outline-secondary btn-sm">
-          ← Posiciones
-        </Link>
-        {updating && (
-          <span className="text-muted small ms-auto">Guardando…</span>
-        )}
-      </div>
-
-      <h2 className="mb-4">{positionName}</h2>
-
-      {actionError && (
-        <Alert variant="warning" dismissible onClose={() => setActionError(null)}>
-          {actionError}
-        </Alert>
-      )}
-
-      <div className="w-100 overflow-x-auto pb-2">
-        <div className="d-flex flex-column flex-md-row gap-3 flex-md-nowrap">
-        {steps.map((step, stepIndex) => (
-          <div
-            key={step.id}
-            className="flex-shrink-0 bg-light rounded p-3 border"
-            style={{ minWidth: 'min(100%, 280px)' }}
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={handleDropOnColumn(step.id)}
+    <div className="bg-light min-vh-100">
+      <Container className="py-5 px-4" style={{ maxWidth: 1600 }}>
+        <div className="mb-4">
+          <Link
+            to="/positions"
+            className="btn btn-link text-decoration-none text-secondary ps-0 mb-3 d-inline-flex align-items-center"
           >
-            <h6 className="text-secondary mb-3">{step.name}</h6>
-            <div className="d-flex flex-column gap-2">
-              {candidatesForColumn(step, stepIndex).map((c) => (
-                <Card
-                  key={`${c.applicationId}-${c.id}`}
-                  className="shadow-sm"
-                  draggable
-                  onDragStart={handleDragStart(c)}
-                >
-                  <Card.Body className="py-2 px-3">
-                    <Card.Title className="h6 mb-1">{c.fullName}</Card.Title>
-                    <Card.Text className="small text-muted mb-0">
-                      Puntuación media:{' '}
-                      {Number.isFinite(c.averageScore) ? c.averageScore.toFixed(1) : '—'}
-                    </Card.Text>
-                  </Card.Body>
-                </Card>
-              ))}
-            </div>
-          </div>
-        ))}
+            <ArrowLeft className="me-2" aria-hidden />
+            Volver
+          </Link>
+          <h1 className="fw-bold mb-0">{positionName}</h1>
+          {updating && <span className="text-muted small d-block mt-2">Guardando…</span>}
         </div>
-      </div>
-    </Container>
+
+        {actionError && (
+          <Alert variant="warning" dismissible onClose={() => setActionError(null)}>
+            {actionError}
+          </Alert>
+        )}
+
+        <Row className="g-4">
+          {steps.map((step, stepIndex) => {
+            const isOver = dragOverStepId === step.id;
+            return (
+              <Col key={step.id} xs={12} md={6} xl={3}>
+                <div
+                  className={`d-flex flex-column rounded p-4 h-100 ${
+                    isOver ? 'bg-white border border-primary border-2' : 'bg-body-secondary border border-transparent'
+                  }`}
+                  style={{ minHeight: 400 }}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setDragOverStepId(step.id);
+                  }}
+                  onDrop={handleDropOnColumn(step.id)}
+                >
+                  <h3 className="fw-semibold fs-6 mb-4 px-2">{step.name}</h3>
+                  <div className="d-flex flex-column gap-3 flex-grow-1">
+                    {candidatesForColumn(step, stepIndex).map((c) => (
+                      <Card
+                        key={`${c.applicationId}-${c.id}`}
+                        className="border-0 shadow-sm"
+                        draggable
+                        onDragStart={handleDragStart(c)}
+                        onDragEnd={handleDragEnd}
+                      >
+                        <Card.Body className="p-4">
+                          <div className="d-flex flex-column gap-2">
+                            <p className="fw-medium mb-0" style={{ cursor: 'grab' }}>
+                              {c.fullName}
+                            </p>
+                            <ScoreDots average={c.averageScore} />
+                          </div>
+                        </Card.Body>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              </Col>
+            );
+          })}
+        </Row>
+      </Container>
+    </div>
   );
 };
 

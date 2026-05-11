@@ -185,6 +185,34 @@ paths:
           description: Invalid file type, only PDF and DOCX are allowed
         '500':
           description: Error during the file upload process
+  /position:
+    get:
+      summary: List positions
+      description: Returns open recruiting positions with company and deadline metadata for list views.
+      responses:
+        '200':
+          description: Array of positions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    title:
+                      type: string
+                    status:
+                      type: string
+                    deadline:
+                      type: string
+                      nullable: true
+                      description: Application deadline (YYYY-MM-DD) when set
+                    companyName:
+                      type: string
+        '500':
+          description: Internal server error
   /position/{id}/candidates:
     get:
       summary: Get candidates by position
