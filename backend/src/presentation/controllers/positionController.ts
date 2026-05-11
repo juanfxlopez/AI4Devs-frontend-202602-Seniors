@@ -1,22 +1,5 @@
 import { Request, Response } from 'express';
-import {
-  getCandidatesByPositionService,
-  getInterviewFlowByPositionService,
-  getPositionsListService,
-} from '../../application/services/positionService';
-
-export const getPositionsList = async (_req: Request, res: Response) => {
-  try {
-    const list = await getPositionsListService();
-    res.status(200).json(list);
-  } catch (error) {
-    if (error instanceof Error) {
-      res.status(500).json({ message: 'Error retrieving positions', error: error.message });
-    } else {
-      res.status(500).json({ message: 'Error retrieving positions', error: String(error) });
-    }
-  }
-};
+import { getCandidatesByPositionService, getInterviewFlowByPositionService } from '../../application/services/positionService';
 
 export const getCandidatesByPosition = async (req: Request, res: Response) => {
     try {
